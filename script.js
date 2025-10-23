@@ -1,20 +1,26 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Configuration
-    const CSV_FILE_PATH = 'statements.csv'; // The name of your CSV file
-    const CSV_CLASS_HEADER = 'ClassName';    // The exact name of the class column in your CSV
-    const CSV_STATEMENT_HEADER = 'Statement'; // The exact name of the statement column
+    // --- Configuration ---
+    const CSV_FILE_PATH = 'statements.csv'; 
+    const CSV_CLASS_HEADER = 'ClassName';    
+    const CSV_STATEMENT_HEADER = 'Statement'; 
+    const CSV_DAY_HEADER = 'Day'; // <-- NEW: The header for the day number
 
-    // Get DOM elements
-    const buttonsContainer = document.getElementById('class-buttons');
+    // --- DOM Elements ---
+    const classButtonsContainer = document.getElementById('class-buttons');
+    const dayManagerContainer = document.getElementById('day-manager');
     const statementsContainer = document.getElementById('statements-container');
 
-    let allStatements = []; // To store all parsed statements
+    // --- Application State ---
+    let allStatements = []; // Holds all parsed CSV data
+    let allDaysByClass = {}; // Holds available days for each class, e.g., {"Math 8": [1, 2, 3, 5]}
+    let classDayCounters = {}; // Holds the *currently selected* day for each class, e.g., {"Math 8": 2}
 
     /**
      * Main function to initialize the application
      */
     async function init() {
         try {
+            // 1. Load and parse the CSV
             const csvText = await fetchCSV(CSV_FILE_PATH);
             allStatements = parseCSV(csvText);
             
@@ -23,17 +29,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            setupButtons();
+            // 2. Process data and load saved state
+            buildClassDayMap();
             loadSavedState();
+
+            // 3. Set up the UI
+            setupClassButtons();
+            
+            // 4. Load the initial view based on saved state
+            const lastClass = localStorage.getItem('lastViewedClass');
+            const classToLoad = (lastClass && allDaysByClass[lastClass]) 
+                ? lastClass 
+                : Object.keys(allDaysByClass)[0]; // Load last class or default to first
+            
+            if (classToLoad) {
+                selectClass(classToLoad);
+            } else {
+                statementsContainer.innerHTML = '<p>No valid class data found.</p>';
+            }
 
         } catch (error) {
             console.error('Initialization failed:', error);
-            statementsContainer.innerHTML = '<p>Error loading statements. Please check the console and ensure the "statements.csv" file exists.</p>';
+            statementsContainer.innerHTML = `<p>Error loading statements: ${error.message}</p>`;
         }
     }
 
     /**
-     * Fetches the CSV file from the server
+     * Fetches the CSV file
      */
     async function fetchCSV(url) {
         const response = await fetch(url);
@@ -50,92 +72,174 @@ document.addEventListener('DOMContentLoaded', () => {
         const lines = text.trim().split('\n');
         const headers = lines.shift().split(',').map(h => h.trim());
 
-        // Find the column indices by their header name
         const classIndex = headers.indexOf(CSV_CLASS_HEADER);
         const statementIndex = headers.indexOf(CSV_STATEMENT_HEADER);
+        const dayIndex = headers.indexOf(CSV_DAY_HEADER); // <-- NEW
 
-        if (classIndex === -1 || statementIndex === -1) {
-            throw new Error(`CSV must contain "${CSV_CLASS_HEADER}" and "${CSV_STATEMENT_HEADER}" headers.`);
+        if (classIndex === -1 || statementIndex === -1 || dayIndex === -1) {
+            throw new Error(`CSV must contain "${CSV_CLASS_HEADER}", "${CSV_STATEMENT_HEADER}", and "${CSV_DAY_HEADER}" headers.`);
         }
 
         return lines.map(line => {
-            // Basic CSV parsing (split by comma)
-            // This is simple and assumes no commas within quotes.
             const values = line.split(',');
+            const day = parseInt(values[dayIndex] ? values[dayIndex].trim() : '', 10);
             return {
                 className: values[classIndex] ? values[classIndex].trim() : '',
-                statement: values[statementIndex] ? values[statementIndex].trim() : ''
+                statement: values[statementIndex] ? values[statementIndex].trim() : '',
+                day: day // <-- NEW
             };
-        }).filter(item => item.className && item.statement); // Ensure rows are valid
+        }).filter(item => item.className && item.statement && !isNaN(item.day)); // Ensure all data is valid
     }
 
     /**
-     * Creates a button for each unique class found in the data
+     * Creates a map of which days are available for each class
+     * Populates the `allDaysByClass` object
      */
-    function setupButtons() {
-        // Get a unique set of class names
-        const classNames = [...new Set(allStatements.map(item => item.className))];
+    function buildClassDayMap() {
+        allStatements.forEach(item => {
+            if (!allDaysByClass[item.className]) {
+                allDaysByClass[item.className] = new Set();
+            }
+            allDaysByClass[item.className].add(item.day);
+        });
+
+        // Convert sets to sorted number arrays
+        for (const className in allDaysByClass) {
+            allDaysByClass[className] = [...allDaysByClass[className]].sort((a, b) => a - b);
+        }
+    }
+
+    /**
+     * Loads the saved day counters from localStorage
+     */
+    function loadSavedState() {
+        classDayCounters = JSON.parse(localStorage.getItem('classDayCounters')) || {};
+    }
+
+    /**
+     * Saves the current day counters to localStorage
+     */
+    function saveState() {
+        localStorage.setItem('classDayCounters', JSON.stringify(classDayCounters));
+    }
+
+    /**
+     * Creates a button for each unique class
+     */
+    function setupClassButtons() {
+        const classNames = Object.keys(allDaysByClass).sort();
+        classButtonsContainer.innerHTML = ''; 
         
-        buttonsContainer.innerHTML = ''; // Clear loading/default text
-        
-        classNames.sort().forEach(name => {
+        classNames.forEach(name => {
             const button = document.createElement('button');
             button.textContent = name;
-            // Use a data-attribute to store the class name
             button.dataset.className = name; 
-            
-            button.addEventListener('click', () => {
-                displayStatements(name);
-            });
-            
-            buttonsContainer.appendChild(button);
+            button.addEventListener('click', () => selectClass(name));
+            classButtonsContainer.appendChild(button);
         });
     }
 
     /**
-     * Displays the "I Can" statements for a given class
+     * Called when a class button is clicked.
+     * This is the main controller for changing the view.
      */
-    function displayStatements(className) {
-        // 1. Filter the statements for the selected class
-        const relevantStatements = allStatements.filter(item => item.className === className);
-        
-        // 2. Clear the old statements
-        statementsContainer.innerHTML = '';
-        
-        // 3. Display the new statements
-        relevantStatements.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'statement'; // Apply CSS class
-            div.textContent = item.statement;
-            statementsContainer.appendChild(div);
-        });
-
-        // 4. Update the active button
+    function selectClass(className) {
+        // 1. Update active button
         document.querySelectorAll('#class-buttons button').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.className === className);
         });
 
-        // 5. Remember this class!
-        // This is the "remember where I left off" part.
+        // 2. Remember this as the last viewed class
         localStorage.setItem('lastViewedClass', className);
+
+        // 3. Get the days for this class
+        const availableDays = allDaysByClass[className];
+        if (!availableDays || availableDays.length === 0) {
+            dayManagerContainer.innerHTML = '';
+            statementsContainer.innerHTML = '<p>No statements found for this class.</p>';
+            return;
+        }
+
+        // 4. Find the current day (from memory, or default to first day)
+        let currentDay = classDayCounters[className] || availableDays[0];
+
+        // 5. Sanity check: If the saved day no longer exists (e.g., CSV changed), reset to Day 1
+        if (!availableDays.includes(currentDay)) {
+            currentDay = availableDays[0];
+            classDayCounters[className] = currentDay;
+            saveState();
+        }
+
+        // 6. Build the Day Manager UI (Prev/Next buttons)
+        setupDayManager(className, currentDay);
+
+        // 7. Display the statements for that class and day
+        displayStatements(className, currentDay);
     }
 
     /**
-     * Checks localStorage for a saved class and loads it
+     * Renders the "Previous", "Current Day", and "Next" UI
      */
-    function loadSavedState() {
-        const savedClass = localStorage.getItem('lastViewedClass');
-        
-        // Check if a class was saved AND if that class still exists
-        const classExists = allStatements.some(item => item.className === savedClass);
+    function setupDayManager(className, currentDay) {
+        const availableDays = allDaysByClass[className];
+        const currentDayIndex = availableDays.indexOf(currentDay);
 
-        if (savedClass && classExists) {
-            displayStatements(savedClass);
-        } else if (allStatements.length > 0) {
-            // Otherwise, just display the first class in the list
-            const firstClass = allStatements[0].className;
-            displayStatements(firstClass);
+        const hasPrev = currentDayIndex > 0;
+        const hasNext = currentDayIndex < availableDays.length - 1;
+
+        dayManagerContainer.innerHTML = `
+            <button id="day-prev" ${!hasPrev ? 'disabled' : ''}>&laquo; Previous</button>
+            <span id="day-current">Day ${currentDay}</span>
+            <button id="day-next" ${!hasNext ? 'disabled' : ''}>Next &raquo;</button>
+        `;
+
+        // Add event listeners
+        if (hasPrev) {
+            document.getElementById('day-prev').addEventListener('click', () => {
+                changeDay(className, availableDays[currentDayIndex - 1]);
+            });
         }
+        if (hasNext) {
+            document.getElementById('day-next').addEventListener('click', () => {
+                changeDay(className, availableDays[currentDayIndex + 1]);
+            });
+        }
+    }
+
+    /**
+     * Called when "Previous" or "Next" is clicked
+     */
+    function changeDay(className, newDay) {
+        // 1. Update the state
+        classDayCounters[className] = newDay;
+        saveState();
+
+        // 2. Re-render the UI for the new day
+        setupDayManager(className, newDay);
+        displayStatements(className, newDay);
+    }
+
+    /**
+     * Displays the "I Can" statements for a given class AND day
+     */
+    function displayStatements(className, day) {
+        const relevantStatements = allStatements.filter(
+            item => item.className === className && item.day === day
+        );
+        
+        statementsContainer.innerHTML = '';
+        
+        if (relevantStatements.length === 0) {
+            statementsContainer.innerHTML = '<p>No statements scheduled for this day.</p>';
+            return;
+        }
+
+        relevantStatements.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'statement';
+            div.textContent = item.statement;
+            statementsContainer.appendChild(div);
+        });
     }
 
     // Run the application
