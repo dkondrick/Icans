@@ -1,12 +1,18 @@
-ClassName,Statement
-Math 8,I can solve equations with variables on both sides.
-Math 8,I can graph a linear equation using slope-intercept form.
-Math 8,I can apply the Pythagorean theorem to find unknown side lengths.
-Science 8,I can identify the parts of an atom.
-Science 8,I can describe the process of photosynthesis.
-Science 8,I can balance a chemical equation.
-History 8,I can analyze the causes of the American Revolution.
-History 8,I can describe the major events of the Civil War.
-English 8,I can identify the main theme in a piece of literature.
-English 8,I can write a persuasive essay using supporting evidence.
-English 8,I can use commas and semicolons correctly.
+ClassName,Statement,Day
+Math 8,I can solve one-step equations.,1
+Math 8,I can solve two-step equations.,1
+Math 8,I can combine like terms.,2
+Math 8,I can use the distributive property.,2
+Math 8,I can solve equations with variables on both sides.,3
+Math 8,I can graph a linear equation using slope-intercept form.,4
+Math 8,I can apply the Pythagorean theorem.,5
+Science 8,I can identify the parts of an atom.,1
+Science 8,I can describe the process of photosynthesis.,2
+Science 8,I can balance a chemical equation.,2
+Science 8,I can explain Newton's First Law.,3
+History 8,I can analyze the causes of the American Revolution.,1
+History 8,I can describe the major events of the Civil War.,2
+English 8,I can identify the main theme in a piece of literature.,1
+English 8,I can write a persuasive essay introduction.,1
+English 8,I can write a persuasive essay body paragraph.,2
+English 8,I can use commas and semicolons correctly.,3
