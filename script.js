@@ -68,28 +68,70 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Parses the raw CSV text into an array of objects
      */
-    function parseCSV(text) {
-        const lines = text.trim().split('\n');
-        const headers = lines.shift().split(',').map(h => h.trim());
+/**
+ * Helper function to parse a single line of CSV, handling quoted fields.
+ */
+function parseCSVLine(line) {
+    const values = [];
+    let inQuote = false;
+    let currentValue = '';
 
-        const classIndex = headers.indexOf(CSV_CLASS_HEADER);
-        const statementIndex = headers.indexOf(CSV_STATEMENT_HEADER);
-        const dayIndex = headers.indexOf(CSV_DAY_HEADER); // <-- NEW
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
 
-        if (classIndex === -1 || statementIndex === -1 || dayIndex === -1) {
-            throw new Error(`CSV must contain "${CSV_CLASS_HEADER}", "${CSV_STATEMENT_HEADER}", and "${CSV_DAY_HEADER}" headers.`);
+        if (char === '"') {
+            // Toggle inQuote state, but skip adding the quote to the value
+            inQuote = !inQuote;
+        } else if (char === ',' && !inQuote) {
+            // If we hit a comma and we're not in a quote, end the current value
+            values.push(currentValue.trim());
+            currentValue = '';
+        } else {
+            // Add the character to the current value
+            currentValue += char;
         }
-
-        return lines.map(line => {
-            const values = line.split(',');
-            const day = parseInt(values[dayIndex] ? values[dayIndex].trim() : '', 10);
-            return {
-                className: values[classIndex] ? values[classIndex].trim() : '',
-                statement: values[statementIndex] ? values[statementIndex].trim() : '',
-                day: day // <-- NEW
-            };
-        }).filter(item => item.className && item.statement && !isNaN(item.day)); // Ensure all data is valid
     }
+    // Add the last value after the loop finishes
+    values.push(currentValue.trim()); 
+    
+    // Remove any surrounding quotes that might remain (e.g., from an unquoted field)
+    return values.map(v => v.replace(/^"|"$/g, '')); 
+}
+
+/**
+ * Parses the raw CSV text into an array of objects
+ */
+function parseCSV(text) {
+    const lines = text.trim().split('\n');
+    // Use the new line parser for headers too
+    const headers = parseCSVLine(lines.shift()); 
+
+    const classIndex = headers.indexOf(CSV_CLASS_HEADER);
+    const statementIndex = headers.indexOf(CSV_STATEMENT_HEADER);
+    const dayIndex = headers.indexOf(CSV_DAY_HEADER);
+
+    if (classIndex === -1 || statementIndex === -1 || dayIndex === -1) {
+        throw new Error(`CSV must contain "${CSV_CLASS_HEADER}", "${CSV_STATEMENT_HEADER}", and "${CSV_DAY_HEADER}" headers.`);
+    }
+
+    return lines.map(line => {
+        if (!line) return null; // Skip empty lines
+        
+        const values = parseCSVLine(line);
+        
+        if (values.length !== headers.length) {
+            console.warn('Skipping malformed CSV line:', line);
+            return null;
+        }
+        
+        const day = parseInt(values[dayIndex], 10);
+        return {
+            className: values[classIndex],
+            statement: values[statementIndex],
+            day: day
+        };
+    }).filter(item => item && item.className && item.statement && !isNaN(item.day)); // Filter out nulls and invalid data
+}
 
     /**
      * Creates a map of which days are available for each class
