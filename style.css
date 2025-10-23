@@ -17,9 +17,7 @@ h1 {
     justify-content: center;
     flex-wrap: wrap;
     gap: 10px;
-    margin-bottom: 30px;
-    border-bottom: 2px solid #e0e0e0;
-    padding-bottom: 20px;
+    margin-bottom: 20px;
 }
 
 #class-buttons button {
@@ -39,10 +37,55 @@ h1 {
     background-color: #e6f2ff;
 }
 
-/* This "active" class is added by JavaScript */
 #class-buttons button.active {
     background-color: #007bff;
     color: #ffffff;
+}
+
+/* Day Manager (NEW) */
+#day-manager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#day-manager button {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#day-manager button:hover {
+    background-color: #5a6268;
+}
+
+/* Style for when buttons are disabled (e.g., on Day 1) */
+#day-manager button:disabled {
+    background-color: #e0e0e0;
+    cursor: not-allowed;
+}
+
+#day-current {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    min-width: 80px;
+    text-align: center;
 }
 
 /* Statement Container */
@@ -51,7 +94,6 @@ h1 {
     margin: 0 auto;
 }
 
-/* Individual Statement Card */
 .statement {
     background-color: #ffffff;
     border-radius: 8px;
