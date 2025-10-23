@@ -1,0 +1,64 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f4f7f6;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+}
+
+/* Button Navigation Bar */
+#class-buttons {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 20px;
+}
+
+#class-buttons button {
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #007bff;
+    border: 2px solid #007bff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#class-buttons button:hover {
+    background-color: #e6f2ff;
+}
+
+/* This "active" class is added by JavaScript */
+#class-buttons button.active {
+    background-color: #007bff;
+    color: #ffffff;
+}
+
+/* Statement Container */
+#statements-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Individual Statement Card */
+.statement {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    border-left: 5px solid #007bff;
+}
